@@ -1550,7 +1550,7 @@ program.command('init-dft')
         parent: options.parent,
         parentOwner: parentOwnerRecord,
         disableMiningChalk: options.disablechalk,
-      }, file, walletRecord.address, requestTicker, mintAmount, maxMints, mintHeight, mintbitworkc, mintbitworkc, fundingRecord.WIF);
+      }, file, walletRecord.address, requestTicker, mintAmount, maxMints, mintHeight, mintbitworkc, options.mintbitworkr, fundingRecord.WIF);
       handleResultLogging(result);
     } catch (error) {
       console.log(error);
