@@ -723,6 +723,13 @@ export class AtomicalOperationBuilder {
                     isWorkDone = true;
                     stopAllWorkers();
 
+                    console.log(
+                      "finalCopyData:" + JSON.stringify(message.finalCopyData)
+                    );
+                    console.log(
+                      "finalSequence:" + JSON.stringify(message.finalSequence)
+                    );
+
                     const atomPayload = new AtomicalsPayload(
                         message.finalCopyData
                     );
@@ -995,7 +1002,6 @@ export class AtomicalOperationBuilder {
             }
 
             const revealTx = psbt.extractTransaction();
-            console.log("\nPrint raw tx in case of broadcast failure", revealTx.toHex());
             const checkTxid = revealTx.getId();
             logMiningProgressToConsole(
                 performBitworkForRevealTx,
@@ -1012,6 +1018,11 @@ export class AtomicalOperationBuilder {
                     this.bitworkInfoReveal?.ext as any
                 )
             ) {
+                console.log(
+                    "\nPrint raw tx in case of broadcast failure",
+                    revealTx.toHex()
+                );
+
                 process.stdout.clearLine(0);
                 process.stdout.cursorTo(0);
                 process.stdout.write(
