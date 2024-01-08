@@ -1557,6 +1557,36 @@ program.command('init-dft')
     }
   });
 
+program.command('generate-dft-revealtx')
+  .description('Generate the reveal transaction for a decentralized fungible token (FT) atomical')
+  .argument('<ticker>', 'string')
+  .argument('finalCopiedData', 'string')
+  .option('--initialowner <string>', 'Initial owner wallet alias to mint the Atomical into')
+  .option('--funding <string>', 'Use wallet alias wif key to be used for funding and change')
+  .option('--satsbyte <number>', 'Satoshis per byte in fees', '150')
+  .option('--disablechalk', 'Whether to disable the real-time chalked logging of each hash for Bitwork mining. Improvements mining performance to set this flag')
+  .action(async (ticker, finalCopiedData, options) => {
+    try{
+      const walletInfo = await validateWalletStorage();
+      const config: ConfigurationInterface = validateCliInputs();
+      ticker = ticker.toLowerCase();
+      finalCopiedData = JSON.parse(finalCopiedData);
+      const atomicals = new Atomicals(ElectrumApi.createClient(process.env.ELECTRUMX_PROXY_BASE_URL || ''));
+      let walletRecord = resolveWalletAliasNew(walletInfo, options.initialowner, walletInfo.primary);
+      let fundingRecord = resolveWalletAliasNew(walletInfo, options.funding, walletInfo.funding);
+
+      const result: any = await atomicals.generateDftRevealTxInteractive({
+        satsbyte: parseInt(options.satsbyte),
+        disableMiningChalk: options.disablechalk,
+      }, walletRecord.address, ticker, finalCopiedData, fundingRecord.WIF);
+      
+      handleResultLogging(result, true);
+
+    }catch(error){
+      console.log(error);
+    }
+  });
+
 program.command('mint-dft')
   .description('Mint coins for a decentralized fungible token (FT)')
   .argument('<ticker>', 'string')
