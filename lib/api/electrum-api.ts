@@ -112,6 +112,19 @@ export class ElectrumApi implements ElectrumApiInterface {
         });
     }
 
+    public async estimateFee(blocks = 1) {
+        const p = new Promise((resolve, reject) => {
+            this.call('blockchain.estimatefee', [blocks]).then(function (result: any) {
+                resolve({
+                    success: true,
+                    result
+                });
+            }).catch((error) => {
+                reject(error);
+            })
+        });
+        return p;
+    }
     async waitUntilUTXO(address: string, satoshis: number, intervalSeconds = 10, exactSatoshiAmount = false): Promise<UTXO> {
         function hasAttachedAtomicals(utxo): any | null {
             if (utxo && utxo.atomicals && utxo.atomicals.length) {

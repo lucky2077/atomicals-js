@@ -22,9 +22,10 @@ export class GetContainerItemValidatedByManifestCommand implements CommandInterf
     private electrumApi: ElectrumApiInterface,
     private container: string,
     private requestDmitem: string,
-    private manifestJsonFile: string
+    private manifestJsonFile: string,
+    private checkWithoutSealed: boolean,
   ) {
-  
+
     this.container = this.container.startsWith('#') ? this.container.substring(1) : this.container;
   }
   async run(): Promise<any> {
@@ -57,7 +58,7 @@ export class GetContainerItemValidatedByManifestCommand implements CommandInterf
     if (expectedData['args']['bitworkr']) {
       bitworkr = expectedData['args']['bitworkr'];
     }
-    const getItemCmd = new GetContainerItemValidatedCommand(this.electrumApi, this.container, this.requestDmitem, bitworkc, bitworkr, main, mainHash, proof, true);
+    const getItemCmd = new GetContainerItemValidatedCommand(this.electrumApi, this.container, this.requestDmitem, bitworkc, bitworkr, main, mainHash, proof, this.checkWithoutSealed);
     const getItemCmdResponse = await getItemCmd.run();
     console.log('getItemCmdResponse', getItemCmdResponse)
     return {

@@ -11,8 +11,9 @@ import {
 import { GetByTickerCommand } from "./get-by-ticker-command";
 import { BaseRequestOptions } from "../interfaces/api.interface";
 import { AtomicalOperationBuilder } from "../utils/atomical-operation-builder";
-import { BitworkInfo, checkBaseRequestOptions, isValidBitworkMinimum, isValidBitworkString } from "../utils/atomical-format-helpers";
-import { prepareFilesDataAsObject, readJsonFileAsCompleteDataObjectEncodeAtomicalIds } from "./command-helpers";
+import { checkBaseRequestOptions, isValidBitworkMinimum } from "../utils/atomical-format-helpers";
+import { readJsonFileAsCompleteDataObjectEncodeAtomicalIds } from "./command-helpers";
+import { isHex } from "../utils/utils";
 const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
 
@@ -41,7 +42,7 @@ const promptContinue = async (): Promise<any>  => {
   }
 }
 
-export class InitInteractiveDftCommand implements CommandInterface {
+export class InitInteractiveInfiniteDftCommand implements CommandInterface {
   constructor(
     private electrumApi: ElectrumApiInterface,
     private options: BaseRequestOptions,
@@ -51,16 +52,20 @@ export class InitInteractiveDftCommand implements CommandInterface {
     private mintAmount: number,
     private maxMints: number,
     private mintHeight: number,
-    private mintBitworkc: string,
-    private mintBitworkr: string | null,
+    private mintBitworkVector: string,
+    private mintBitworkCommitIncrement: number,
+    private mintBitworkRevealIncrement: number | null,
+    private mintBitworkCommitIncrementStart: number | null,
+    private mintBitworkRevealIncrementStart: number | null,
     private fundingWIF: string,
+    private noimage?: boolean
   ) {
     this.options = checkBaseRequestOptions(this.options);
     this.requestTicker = this.requestTicker.startsWith('$') ? this.requestTicker.substring(1) : this.requestTicker;
     isValidBitworkMinimum(this.options.bitworkc);
 
-    if (this.maxMints > 500000 || this.maxMints < 10000) {
-      throw new Error('Command line tool expects max mints to be between 10,000 and 500,000')
+    if (this.maxMints > 100000 || this.maxMints < 1) {
+      throw new Error('Command line tool expects max mints to be between 1 and 100,000')
     }
     
     if (this.mintAmount > 100000000 || this.mintAmount < 546) {
@@ -69,53 +74,62 @@ export class InitInteractiveDftCommand implements CommandInterface {
   }
 
   async run(): Promise<any> {
-    // let filesData = await prepareFilesDataAsObject(this.files);
-    let filesData = await readJsonFileAsCompleteDataObjectEncodeAtomicalIds(this.file, true);
-    console.log(filesData)
-    if (!filesData['name']) {
-      throw new Error('Please set a name in the files metadata. See examples in /templates/fungible-tokens')
-    }
-
-    if (!filesData['legal']) {
-      throw new Error('Please set legal in the files metadata. See examples in /templates/fungible-tokens')
-    }
-
-    if (!filesData['legal']['terms']) {
-      throw new Error('Please set legal terms in the files metadata. See examples in /templates/fungible-tokens')
-    }
-
-    if (filesData['image']) {
-      // Ex: atom:btc:dat:<location of store-file data>/image.png
-      const re = /atom\:btc\:dat\:[a-f0-9]{64}i0\/.*\.(png|jpeg|svg|jpg|gif|webp)/
-      if (!re.test(filesData['image'])) {
-        throw new Error('The image field in the metadata is invalid and must be in the format of atom:btc:dat:<locationId>/image.png - create the file with the store-file command and copy the urn into the image field')
+    let filesData;
+    if (this.file) {
+      filesData = await readJsonFileAsCompleteDataObjectEncodeAtomicalIds(this.file, true);
+      console.log(filesData)
+      if (!filesData['name']) {
+        throw new Error('Please set a name in the files metadata. See examples in /templates/fungible-tokens')
+      }
+  
+      if (!filesData['legal']) {
+        throw new Error('Please set legal in the files metadata. See examples in /templates/fungible-tokens')
+      }
+  
+      if (!filesData['legal']['terms']) {
+        throw new Error('Please set legal terms in the files metadata. See examples in /templates/fungible-tokens')
+      }
+  
+      if (!this.noimage && filesData['image']) {
+        // Ex: atom:btc:dat:<location of store-file data>/image.png
+        const re = /atom\:btc\:dat\:[a-f0-9]{64}i0\/.*\.(png|jpeg|svg|jpg|gif|webp)/
+        if (!re.test(filesData['image'])) {
+          throw new Error('The image field in the metadata is invalid and must be in the format of atom:btc:dat:<locationId>/image.png - create the file with the store-file command and copy the urn into the image field')
+        }
+      }
+    } else {
+      // Just default some metadata if a file was not provided
+      filesData = {
+        name: this.requestTicker.toUpperCase()
       }
     }
-    console.log('Initializing Decentralized FT Token')
+   
+    console.log('Initializing Infinite Decentralized FT Token')
     console.log('-----------------------')
-    let supply = this.maxMints * this.mintAmount;
-    console.log('Total Supply (Satoshis): ', supply);
-    console.log('Total Supply (BTC): ', supply / 100000000);
-    let expandedSupply = supply;
-    console.log('Total Supply: ', expandedSupply);
-    console.log('Max mints', this.maxMints);
-    console.log('Mint Bitwork (commit)', this.mintBitworkc);
-    console.log('Mint Amount', this.mintAmount);
+    console.log('Total Supply (Satoshis): unbounded');
+    console.log('Total Supply (BTC): unbounded');
+    console.log('Total Supply: unbounded');
+    console.log('Max mints (per Bitwork difficulty target): ', this.maxMints);
+    console.log('Mint Bitwork Vector: ', this.mintBitworkVector);
+    console.log('Mint Bitwork (commit) Increment: ', this.mintBitworkCommitIncrement);
+    console.log('Mint Bitwork (commit) Increment Start: ', this.mintBitworkCommitIncrementStart);
+    console.log('Mint Bitwork (reveal) Increment: ', this.mintBitworkRevealIncrement);
+    console.log('Mint Bitwork (reveal) Increment Start: ', this.mintBitworkRevealIncrementStart);
+    console.log('Mint Height: ', this.mintHeight);
+    console.log('Mint Amount: ', this.mintAmount);
     console.log('Data objects: ', filesData);
     console.log('-----------------------')
     
-    if (this.mintBitworkc?.length < 5) {
-      console.log('WARNING: Mint Bitworkc is too easy to mine and can be mined in less than a minute or faster. Confirm if that is acceptable.', this.mintBitworkc);
+    if (this.mintBitworkCommitIncrement < 1 || this.mintBitworkCommitIncrement > 64) {
+      throw new Error('Error: Mint Bitwork Commit Increment must be between 1 and 64')
+    }
+    if (this.mintBitworkRevealIncrement && (this.mintBitworkRevealIncrement < 1 || this.mintBitworkRevealIncrement > 64)) {
+      throw new Error('Error: Mint Bitwork Reveal Increment must be between 1 and 64')
     }
 
-    if (this.mintBitworkc?.length > 8) {
-      console.log('WARNING: Mint Bitworkc might be too hard to mine and could take a very long time. Confirm if that is acceptable.', this.mintBitworkc);
+    if (this.mintBitworkVector.length < 4 || !isHex(this.mintBitworkVector)) {
+      throw new Error('Error: Mint Bitwork Vector must be a hex string at least length 4')
     }
-
-    if (supply < 100000000) {
-      console.log('WARNING: Total supply is less than 1,000,000,000. Confirm if that is acceptable.', supply);
-    }
-
     await promptContinue();
 
     const getExistingNameCommand = new GetByTickerCommand(this.electrumApi, this.requestTicker, AtomicalsGetFetchType.GET, undefined);
@@ -158,19 +172,30 @@ export class InitInteractiveDftCommand implements CommandInterface {
       mint_height: Number(this.mintHeight),
       max_mints: Number(this.maxMints),
     };
+    
+    // Set mint mode = perpetual/infinite
+    args['md'] = 1
+    args['bv'] = this.mintBitworkVector
 
-    let mintBitworkCommitInfo: BitworkInfo | null = null;
-    if (this.mintBitworkc) {
-      mintBitworkCommitInfo = isValidBitworkString(this.mintBitworkc)
-      args['mint_bitworkc'] = mintBitworkCommitInfo?.hex_bitwork;
+    if (this.mintBitworkCommitIncrement) {
+      args['bci'] = this.mintBitworkCommitIncrement
+      if (this.mintBitworkCommitIncrementStart) {
+        if (this.mintBitworkCommitIncrementStart < 0 || this.mintBitworkCommitIncrementStart > 192) {
+          throw new Error('mintBitworkCommitIncrementStart is not a number in range 0 to 192')
+        }
+        args['bcs'] = this.mintBitworkCommitIncrementStart
+      }
     }
-
-    let mintBitworkRevealInfo: BitworkInfo | null = null;
-    if (this.mintBitworkr) {
-      mintBitworkRevealInfo = isValidBitworkString(this.mintBitworkr)
-      args['mint_bitworkr'] = mintBitworkRevealInfo?.hex_bitwork;
+    if (this.mintBitworkRevealIncrement) {
+      args['bri'] = this.mintBitworkRevealIncrement
+      if (this.mintBitworkRevealIncrementStart) {
+        if (this.mintBitworkRevealIncrementStart < 0 || this.mintBitworkRevealIncrementStart > 192) {
+          throw new Error('mintBitworkRevealIncrementStart is not a number in range 0 to 192')
+        }
+        args['brs'] = this.mintBitworkRevealIncrementStart
+      }
     }
-
+ 
     atomicalBuilder.setArgs(args);
     // Set to request a container
     atomicalBuilder.setRequestTicker(this.requestTicker);
