@@ -15,7 +15,9 @@ export class ElectrumApiMock implements ElectrumApiInterface {
     async open() {
         this.isOpenFlag = true;
     }
-
+    async estimateFee(blocks = 1) {
+        throw new Error('not impl')
+    }
     isOpen() {
         return this.isOpenFlag;
     }

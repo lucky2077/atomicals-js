@@ -37,6 +37,8 @@ export interface APIInterface {
     mintFtInteractive(options: BaseRequestOptions, file: string, supply: number, address: string, requestTicker: string, WIF: string): Promise<CommandResultInterface>;
     mintDftInteractive(options: BaseRequestOptions, address: string, ticker: string, WIF: string): Promise<CommandResultInterface>;
     initDftInteractive(options: BaseRequestOptions, file: string, address: string, requestTicker: string, mintAmount: number, maxMints: number, mintHeight: number, mintBitworkc: string, mintBitworkr: string, WIF: string): Promise<CommandResultInterface>;
+    initInfiniteDftInteractive(options: BaseRequestOptions, file: string, address: string, requestTicker: string, mintAmount: number, maxMints: number, mintHeight: number, mintBitworkVector: string, mintBitworkCommitIncrement: number, mintBitworkRevealIncrement: number, mintBitworkCommitIncrementStart: number | null, mintBitworkRevealIncrementStart: number | null, WIF: string, noImage?: boolean): Promise<CommandResultInterface>;
+    initFixedDftInteractive(options: BaseRequestOptions, file: string, address: string, requestTicker: string, mintAmount: number, maxMints: number, mintHeight: number, mintBitworkCommit: string, mintBitworkReveal: string | null, WIF: string, noImage?: boolean): Promise<CommandResultInterface>;
 
     // Create data transaction (Non-Atomical/Non-Token)
     mintDatInteractive(options: BaseRequestOptions, filepath: string, givenFileName: string, address: string, WIF: string): Promise<CommandResultInterface>;
@@ -82,7 +84,7 @@ export interface APIInterface {
     getAtomicalByRealm(realm: string, keepElectrumAlive: boolean): Promise<CommandResultInterface>;
     getAtomicalByTicker(ticker: string, keepElectrumAlive: boolean): Promise<CommandResultInterface>;
     getAtomicalByContainerItem(container: string, itemId: string, keepElectrumAlive: boolean): Promise<CommandResultInterface>;
-    getAtomicalByContainerItemValidated(container: string, itemId: string,  manifestFile: string, address: string, keepElectrumAlive: boolean): Promise<CommandResultInterface>;
+    getAtomicalByContainerItemValidated(container: string, itemId: string,  manifestFile: string, checkWithoutSealed: boolean, address: string, keepElectrumAlive: boolean): Promise<CommandResultInterface>;
 
     resolveAtomical(atomicalIdOrNumberOrVariousName: string, atomicalsGetFetchType: AtomicalsGetFetchType, verbose: boolean, keepElectrumAlive: boolean): Promise<CommandResultInterface>;
     getRealmInfo(atomicalIdOrNumberOrVariousName: string, verbose: boolean, keepElectrumAlive: boolean): Promise<GetSubrealmInfoCommandResultInterface>;
@@ -94,4 +96,5 @@ export interface APIInterface {
     download(locationIdOrTxId: string, name: string): Promise<CommandResultInterface>;
     walletInfo(address: string, verbose: boolean, keepElectrumAlive: boolean): Promise<CommandResultInterface>;
     serverVersion(): Promise<CommandResultInterface>;
+    awaitUtxo(address: string, amount: number): Promise<CommandResultInterface>;
 }

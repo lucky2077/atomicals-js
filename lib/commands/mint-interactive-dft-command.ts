@@ -22,18 +22,13 @@ export class MintInteractiveDftCommand implements CommandInterface {
     private address: string,
     private ticker: string,
     private fundingWIF: string,
+    private useCurrentBitwork?: boolean
   ) {
     this.options = checkBaseRequestOptions(this.options)
     this.ticker = this.ticker.startsWith('$') ? this.ticker.substring(1) : this.ticker;
   }
   async run(): Promise<any> {
-
     // Prepare the keys
-    const keypairRaw = ECPair.fromWIF(
-      this.fundingWIF,
-    );
-    const keypair = getKeypairInfo(keypairRaw);
-    
     const filesData: any[] = await prepareArgsMetaCtx(
       {
         mint_ticker: this.ticker,
@@ -74,11 +69,24 @@ export class MintInteractiveDftCommand implements CommandInterface {
 
     const max_mints = atomicalDecorated['$max_mints']
     const mint_count = atomicalDecorated['dft_info']['mint_count'];
+    const mint_bitworkc_current = atomicalDecorated['dft_info']['mint_bitworkc_current'];
+    const mint_bitworkc_next = atomicalDecorated['dft_info']['mint_bitworkc_next'];
+    const mint_bitworkc_current_remaining = atomicalDecorated['dft_info']['mint_bitworkc_current_remaining'];
+    const mint_bitworkr_current = atomicalDecorated['dft_info']['mint_bitworkr_current'];
+    const mint_bitworkr_next = atomicalDecorated['dft_info']['mint_bitworkr_next'];
+    const mint_bitworkr_current_remaining = atomicalDecorated['dft_info']['mint_bitworkr_current_remaining'];
+
     const ticker = atomicalDecorated['$ticker'];
-    if (atomicalDecorated['dft_info']['mint_count'] >= atomicalDecorated['$max_mints']) {
-      throw new Error(`Decentralized mint for ${ticker} completely minted out!`)
+    const isInfiniteMode = atomicalDecorated['$mint_mode'] == 'perpetual';
+
+    if (isInfiniteMode) {
+      console.log('Infinite minting mode detected, there is no limit')
     } else {
-      console.log(`There are already ${mint_count} mints of ${ticker} out of a max total of ${max_mints}.`)
+      if (atomicalDecorated['dft_info']['mint_count'] >= atomicalDecorated['$max_mints']) {
+        throw new Error(`Decentralized mint for ${ticker} completely minted out!`)
+      } else {
+        console.log(`There are already ${mint_count} mints of ${ticker} out of a max total of ${max_mints}.`)
+      }
     }
  
     console.log('atomicalDecorated', atomicalResponse, atomicalDecorated);
@@ -103,17 +111,36 @@ export class MintInteractiveDftCommand implements CommandInterface {
     if (this.options.container)
       atomicalBuilder.setContainerMembership(this.options.container);
 
-    // Attach any requested bitwork OR automatically request bitwork if the parent decentralized ft requires it
-    const mint_bitworkc = atomicalDecorated['$mint_bitworkc'] || this.options.bitworkc
-    if (mint_bitworkc) {
-      atomicalBuilder.setBitworkCommit(mint_bitworkc);
-    }
+    // In infinite minting mode we have a moving target difficulty always increasing based on how many minted so far
+    if (isInfiniteMode) {
+      // Mine the current or the next difficulty. By default it is the next
+      if (mint_bitworkc_current) {
 
-    const mint_bitworkr = atomicalDecorated['$mint_bitworkr'] || this.options.bitworkr
-    if (mint_bitworkr) {
-      atomicalBuilder.setBitworkReveal(mint_bitworkr);
-    }
+        if (this.useCurrentBitwork) {
+          atomicalBuilder.setBitworkCommit(mint_bitworkc_current);
+        } else {
+          atomicalBuilder.setBitworkCommit(mint_bitworkc_next); 
+        }
 
+      }
+      if (this.useCurrentBitwork) {
+        atomicalBuilder.setBitworkReveal(mint_bitworkr_current);
+      } else {
+        atomicalBuilder.setBitworkReveal(mint_bitworkr_next); 
+      }
+    } else {
+      // Attach any requested bitwork OR automatically request bitwork if the parent decentralized ft requires it
+      const mint_bitworkc = atomicalDecorated['$mint_bitworkc'] || this.options.bitworkc
+      if (mint_bitworkc) {
+        atomicalBuilder.setBitworkCommit(mint_bitworkc);
+      }
+
+      const mint_bitworkr = atomicalDecorated['$mint_bitworkr'] || this.options.bitworkr
+      if (mint_bitworkr) {
+        atomicalBuilder.setBitworkReveal(mint_bitworkr);
+      }
+    }
+   
     // The receiver output of the deploy
     atomicalBuilder.addOutput({
       address: this.address,

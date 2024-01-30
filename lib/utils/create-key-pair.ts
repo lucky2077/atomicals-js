@@ -41,6 +41,12 @@ export const createKeyPair = async (phrase: string = '', path = `m/44'/0'/0'/0/0
     if (!p2trPrimary.address || !p2trPrimary.output) {
         throw "error creating p2tr"
     }
+    /* const p2pkhPrimary = bitcoin.payments.p2pkh({
+        pubkey: childNodePrimary.publicKey,
+        network: NETWORK
+    });
+    // console.log('p2pkhPrimary', p2pkhPrimary, p2pkhPrimary.address.toString())
+    */
     // Used for signing, since the output and address are using a tweaked key
     // We must tweak the signer in the same way.
     const tweakedChildNodePrimary = childNodePrimary.tweak(

@@ -8,10 +8,11 @@ import {
   initEccLib,
 } from "bitcoinjs-lib";
 import { getAndCheckAtomicalInfo, logBanner, readJsonFileAsCompleteDataObjectEncodeAtomicalIds } from "./command-helpers";
-import { isValidBitworkString } from "../utils/atomical-format-helpers";
+import { isAtomicalId, isValidBitworkString } from "../utils/atomical-format-helpers";
 import { AtomicalOperationBuilder } from "../utils/atomical-operation-builder";
 import { BaseRequestOptions } from "../interfaces/api.interface";
 import { IWalletRecord } from "../utils/validate-wallet-storage";
+import { detectScriptToAddressType } from "../utils/address-helpers";
 
 const tinysecp: TinySecp256k1Interface = require('tiny-secp256k1');
 initEccLib(tinysecp as any);
@@ -32,36 +33,64 @@ export function validateDmint(
   obj: {dmint?: DmintManifestInteface} | undefined,
 ) {
   if (!obj) {
-    return false;
+    throw `Invalid manifest.`;
   }
   const dmint = obj.dmint;
   if (!dmint) {
-    return false;
+    throw `Invalid manifest: No 'dmint' field.`;
+  }
+  const items = dmint.items;
+  if (!items) {
+    throw `Invalid items count: ${items}.`;
   }
   for (const {o, p, bitworkc, bitworkr} of dmint.rules) {
-      try {
-          new RegExp(p);
-      } catch (e) {
-          throw `Invalid pattern: ${p}.\n${e}`;
+    try {
+      new RegExp(p);
+    } catch (e) {
+      throw `Invalid rule pattern: ${p}.\n${e}`;
+    }
+    if (o === undefined && bitworkc === undefined && bitworkr === undefined) {
+      throw `Invalid rule (${p}): No fields specified.`;
+    }
+    if (o !== undefined) {
+      if (Object.keys(o).length === 0) {
+        throw `Invalid rule (${p}) output: No script specified.`
       }
-      if (bitworkc && !isValidBitworkString(bitworkc)) {
-          return false;
+      for (const entry of Object.entries(o)) {
+        const script = entry[0]
+        try {
+          detectScriptToAddressType(script)
+        } catch (e) {
+          throw `Invalid rule (${p}) output script [${script}]: ${e}`
+        }
+        const {v, id} = entry[1]
+        if (typeof v !== 'number' || !v || v <= 0) {
+          throw `Invalid rule (${p}) output value: Invalid amount (${v}).`
+        }
+        if (id !== undefined && !isAtomicalId(id)) {
+          throw `Invalid rule (${p}) output id: Invalid Atomical ID (${id}).`
+        }
       }
-      if (bitworkr && !isValidBitworkString(bitworkr)) {
-          return false;
-      }
+    }
+    if (bitworkc !== undefined && !isValidBitworkString(bitworkc)) {
+      throw `Invalid rule (${p}) bitworkc: Invalid bitwork string (${bitworkc}).`
+    }
+    if (bitworkr !== undefined && !isValidBitworkString(bitworkr)) {
+      throw `Invalid rule (${p}) bitworkr: Invalid bitwork string (${bitworkr}).`
+    }
   }
   const mh = dmint.mint_height;
   if (mh === 0) {
     return true;
   }
-  if (mh != undefined) {
+  if (mh !== undefined) {
     if (isNaN(mh)) {
-      return false;
+      throw `Invalid mint height: NaN.`
     }
     if (mh < 0 || mh > 10000000) {
-      return false;
+      throw `Invalid mint height: Should between 0 and 10000000.`
     }
+    return true;
   }
   return false;
 }

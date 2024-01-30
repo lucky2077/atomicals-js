@@ -21,7 +21,7 @@ Workaround: Use `yarn` instead of `npm`
 ## Install
 
 ```
-# Download the github repo:
+# Download the GitHub repo:
 git clone https://github.com/atomicals/atomicals-js.git
 
 cd atomicals-js
@@ -42,17 +42,18 @@ yarn run cli --help
 
 ### Quick Start - Command Line (CLI)
 
-First install packages and build, then follow the steps here to create your first Atomical and query the status. Use `yarn cli`to get a list of all commands available.
+First, install packages and build, then follow the steps here to create your first Atomical and query the status. Use `yarn cli`to get a list of all commands available.
 
 #### 0. Environment File (.env)
 
-The environment file comes with defaults (`.env.example`), but it is highly recommend to install and operate your own ElectrumX server. Web browser communication is possible through the `wss` (secure websockets) interface of ElectrumX.
+The environment file comes with defaults (`.env.example`), but it is highly recommended to install and operate your own ElectrumX server. Web browser communication is possible through the `wss` (secure websockets) interface of ElectrumX.
 
 ```
 ELECTRUMX_WSS=wss://electrumx.atomicals.xyz:50012
 
-// Optional (defaults to wallet.json)
-WALLET_PATH=path-to-wallet.json
+// Optional
+WALLET_PATH=./wallets
+WALLET_FILE=wallet.json
 
 // The number of concurrent processes to be used. This should not exceed the number of CPU cores available. If not set, the default behavior is to use all available CPU cores minus one.
 CONCURRENCY=4
@@ -64,7 +65,7 @@ _ELECTRUMX_WSS_: URL of the ElectrumX with Atomicals support. Note that only `ws
 
 The purpose of the wallet is to create p2tr (pay-to-taproot) spend scripts and to receive change from the transactions made for the various operations. _Do not put more funds than you can afford to lose, as this is still beta!_
 
-To initialize a new `wallet.json` file that will store your address for receiving change use the `wallet-init` command. Alternatively, you may populate the `wallet.json` manually, ensuring that the address at `m/44'/0'/0'/0/0` is equal to the address and the derivePath is set correctly.
+To initialize a new `wallet.json` file that will store your address for receiving change use the `wallet-init` command. Alternatively, you may populate the `wallet.json` manually, ensuring that the address at `m/44'/0'/0'/0/0` equals the address and the derivePath is set correctly.
 
 Configure the path in the environment `.env` file to point to your wallet file. defaults to `./wallet.json`
 
@@ -99,19 +100,13 @@ WIF: L5Sa65gNR6QsBjqK.....r6o4YzcqNRnJ1p4a6GPxqQQ
 
 #### 2. Explore the CLI
 
-```
-yarn cli --help
-```
-
-#### 3. Quick Commands
-
 Get all of the commands available:
 
 ```
 yarn cli --help
 ```
 
-Read the documentation at https://docs.atomicals.xyz
+For more detailed information, please read the documentation at https://docs.atomicals.xyz
 
 ## ElectrumX Server RPC Interface
 
